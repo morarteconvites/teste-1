@@ -1,29 +1,64 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moldura Interativa</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <title>Camera Switch</title>
+  <style>
+    video {
+      width: 100%;
+      max-width: 400px;
+      background: #000;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
 </head>
-
 <body>
 
-  <div id="app">
-    <div class="video-wrapper">
-      <video id="camera" autoplay playsinline></video>
-      <img id="moldura" src="moldura.png" alt="Moldura">
-      <canvas id="canvas"></canvas>
-    </div>
+  <video id="video" autoplay playsinline></video>
+  <button id="switchBtn">Trocar Câmera</button>
 
-    <div class="buttons">
-      <button id="trocar">🔄</button>
-      <button id="foto">📸</button>
-      <button id="videoBtn">🎥</button>
-    </div>
-  </div>
+  <script>
+    let useFrontCamera = true; // começa com a frontal
 
-  <script src="script.js"></script>
+    async function startCamera() {
+      // Encerrar stream anterior
+      if (window.currentStream) {
+        window.currentStream.getTracks().forEach(t => t.stop());
+      }
+
+      const constraints = {
+        audio: false, // remove áudio
+        video: {
+          facingMode: useFrontCamera ? "user" : "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          zoom: false // evita controle automático de zoom
+        }
+      };
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        window.currentStream = stream;
+        document.getElementById("video").srcObject = stream;
+      } catch (error) {
+        console.error("Erro ao acessar câmera:", error);
+        alert("Erro ao acessar a câmera.");
+      }
+    }
+
+    // Botão para alternar câmera
+    document.getElementById("switchBtn").addEventListener("click", () => {
+      useFrontCamera = !useFrontCamera;
+      startCamera();
+    });
+
+    // Inicia automaticamente
+    startCamera();
+  </script>
 
 </body>
 </html>
