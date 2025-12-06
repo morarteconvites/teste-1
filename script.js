@@ -12,7 +12,7 @@ let gravando = false;
 let mediaRecorder;
 let chunks = [];
 
-// Iniciar câmera
+// Função principal para iniciar a câmera
 async function iniciarCamera() {
   try {
     if (stream) {
@@ -21,30 +21,42 @@ async function iniciarCamera() {
 
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: usandoFrontal ? "user" : "environment",
-        width: { ideal: 1080 },
-        height: { ideal: 1920 }
+        facingMode: usandoFrontal ? { exact: "user" } : { exact: "environment" },
+        width: { ideal: 2160 },
+        height: { ideal: 3840 },
+        aspectRatio: 9 / 16
       },
       audio: true
     });
 
     video.srcObject = stream;
 
+    const [track] = stream.getVideoTracks();
+    const capabilities = track.getCapabilities();
+
+    // Evita zoom automático na frontal
+    if (capabilities.zoom) {
+      track.applyConstraints({
+        advanced: [{ zoom: capabilities.zoom.min }]
+      });
+    }
+
   } catch (e) {
     console.error("Erro ao iniciar câmera:", e);
-    alert("Não foi possível acessar a câmera. Dê permissão ao navegador.");
+    alert("Não foi possível acessar a câmera. Verifique permissões.");
   }
 }
 
+// iniciar a câmera quando abrir o site
 iniciarCamera();
 
-// Trocar câmera
+// Trocar entre frontal e traseira
 trocarBtn.onclick = async () => {
   usandoFrontal = !usandoFrontal;
   await iniciarCamera();
 };
 
-// Foto
+// FOTO
 fotoBtn.onclick = () => {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
@@ -60,16 +72,16 @@ fotoBtn.onclick = () => {
   a.click();
 };
 
-// Vídeo
+// VÍDEO
 videoBtn.onclick = () => {
   if (!gravando) {
-    startVideo();
+    iniciarGravacao();
   } else {
-    stopVideo();
+    pararGravacao();
   }
 };
 
-function startVideo() {
+function iniciarGravacao() {
   chunks = [];
   gravando = true;
   videoBtn.textContent = "⏹";
@@ -90,7 +102,7 @@ function startVideo() {
   mediaRecorder.start();
 }
 
-function stopVideo() {
+function pararGravacao() {
   gravando = false;
   videoBtn.textContent = "🎥";
   mediaRecorder.stop();
