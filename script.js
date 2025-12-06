@@ -14,27 +14,34 @@ let chunks = [];
 
 // Iniciar câmera
 async function iniciarCamera() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
+  try {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+    }
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: usandoFrontal ? "user" : "environment",
+        width: { ideal: 1080 },
+        height: { ideal: 1920 }
+      },
+      audio: true
+    });
+
+    video.srcObject = stream;
+
+  } catch (e) {
+    console.error("Erro ao iniciar câmera:", e);
+    alert("Não foi possível acessar a câmera. Dê permissão ao navegador.");
   }
-
-  stream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: usandoFrontal ? "user" : "environment",
-      width: { ideal: 1080 },
-      height: { ideal: 1920 }
-    },
-    audio: true
-  });
-
-  video.srcObject = stream;
 }
+
 iniciarCamera();
 
 // Trocar câmera
-trocarBtn.onclick = () => {
+trocarBtn.onclick = async () => {
   usandoFrontal = !usandoFrontal;
-  iniciarCamera();
+  await iniciarCamera();
 };
 
 // Foto
