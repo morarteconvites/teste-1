@@ -1,96 +1,90 @@
-let camera = document.getElementById("camera");
-let moldura = document.getElementById("moldura");
-let canvas = document.getElementById("canvas");
+const video = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const fotoBtn = document.getElementById("foto");
+const trocarBtn = document.getElementById("trocar");
+const videoBtn = document.getElementById("videoBtn");
+const moldura = document.getElementById("moldura");
 
-let facing = "user";   // frontal
+let stream;
+let usandoFrontal = false;
 let gravando = false;
-let recorder;
+let mediaRecorder;
 let chunks = [];
 
+// Iniciar câmera
 async function iniciarCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: facing }
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+  }
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: usandoFrontal ? "user" : "environment",
+      width: { ideal: 1080 },
+      height: { ideal: 1920 }
+    },
+    audio: true
   });
 
-  camera.srcObject = stream;
+  video.srcObject = stream;
 }
+iniciarCamera();
 
-document.getElementById("trocar").onclick = () => {
-  facing = facing === "user" ? "environment" : "user";
+// Trocar câmera
+trocarBtn.onclick = () => {
+  usandoFrontal = !usandoFrontal;
   iniciarCamera();
 };
 
-document.getElementById("foto").onclick = () => {
-  tirarFoto();
-};
+// Foto
+fotoBtn.onclick = () => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-document.getElementById("videoBtn").onclick = () => {
-  if (!gravando) iniciarVideo();
-  else pararVideo();
-};
-
-function ajustarCanvas() {
-  canvas.width = moldura.naturalWidth;
-  canvas.height = moldura.naturalHeight;
-}
-
-moldura.onload = ajustarCanvas;
-
-function tirarFoto() {
-  ajustarCanvas();
-  let ctx = canvas.getContext("2d");
-
-  ctx.drawImage(camera, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   ctx.drawImage(moldura, 0, 0, canvas.width, canvas.height);
 
-  let link = document.createElement("a");
-  link.download = "foto.png";
-  link.href = canvas.toDataURL();
-  link.click();
-}
+  const foto = canvas.toDataURL("image/png");
 
-async function iniciarVideo() {
-  gravando = true;
-  document.getElementById("videoBtn").innerHTML = "⏹";
+  const a = document.createElement("a");
+  a.href = foto;
+  a.download = "foto.png";
+  a.click();
+};
 
-  ajustarCanvas();
-  let ctx = canvas.getContext("2d");
+// Vídeo
+videoBtn.onclick = () => {
+  if (!gravando) {
+    startVideo();
+  } else {
+    stopVideo();
+  }
+};
 
-  const stream = canvas.captureStream(30);
-  recorder = new MediaRecorder(stream);
-
-  recorder.ondataavailable = (e) => chunks.push(e.data);
-  recorder.onstop = baixarVideo;
-
-  recorder.start();
-
-  gravarQuadros(ctx);
-}
-
-function gravarQuadros(ctx) {
-  if (!gravando) return;
-
-  ctx.drawImage(camera, 0, 0, canvas.width, canvas.height);
-  ctx.drawImage(moldura, 0, 0, canvas.width, canvas.height);
-
-  requestAnimationFrame(() => gravarQuadros(ctx));
-}
-
-function pararVideo() {
-  gravando = false;
-  recorder.stop();
-  document.getElementById("videoBtn").innerHTML = "🎥";
-}
-
-function baixarVideo() {
-  let blob = new Blob(chunks, { type: "video/mp4" });
+function startVideo() {
   chunks = [];
+  gravando = true;
+  videoBtn.textContent = "⏹";
 
-  let url = URL.createObjectURL(blob);
-  let link = document.createElement("a");
-  link.href = url;
-  link.download = "video.mp4";
-  link.click();
+  mediaRecorder = new MediaRecorder(stream);
+
+  mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(chunks, { type: "video/mp4" });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "video.mp4";
+    a.click();
+  };
+
+  mediaRecorder.start();
 }
-  
-iniciarCamera();
+
+function stopVideo() {
+  gravando = false;
+  videoBtn.textContent = "🎥";
+  mediaRecorder.stop();
+}
